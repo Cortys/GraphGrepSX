@@ -16,6 +16,7 @@
 
 #include "timer.h"
 
+using namespace std;
 using namespace GGSXLib;
 
 void usage(char* cmdname);

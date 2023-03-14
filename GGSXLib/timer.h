@@ -8,6 +8,8 @@ typedef LARGE_INTEGER TIMEHANDLE;
 
 extern LARGE_INTEGER _freq;
 
+using namespace std;
+
 inline TIMEHANDLE start_time()
 {
     static int first = 1;
@@ -29,7 +31,7 @@ inline double end_time(TIMEHANDLE th)
     TIMEHANDLE tend;
     QueryPerformanceCounter(&tend);
 
-	double res = (double)(tend.QuadPart - th.QuadPart)/(_freq.QuadPart); 
+	double res = (double)(tend.QuadPart - th.QuadPart)/(_freq.QuadPart);
 	return res;
 }
 
