@@ -1,12 +1,12 @@
 
 
-# 
+#
 # Uncomment the following line if your compiler lacks the bool type
 #
 # -DNEED_BOOL
 
 
-# 
+#
 # Optimization flags
 #
 OPTFLAGS= -O6
@@ -15,9 +15,9 @@ OPTFLAGS= -O6
 #
 # Debugging flags. -g adds debugging info
 # Defining NDEBUG turns assertions off.
-# -pg adds profiling info 
-# 
-DEBUGFLAGS= -g 
+# -pg adds profiling info
+#
+DEBUGFLAGS= -g
 # DEBUGFLAGS=
 # DEBUGFLAGS= -DNDEBUG=1
 # DEBUGFLAGS= -g -pg
@@ -45,9 +45,10 @@ OBJS=	src/argedit.o src/argraph.o src/argloader.o src/error.o src/gene.o \
 	src/sortnodes.o src/xsubgraph.o
 
 all:	lib/$(LIBRARY)
-	
+
 lib/$(LIBRARY):	$(OBJS)
 	-rm lib/$(LIBRARY)
+	-mkdir lib
 	ar rv lib/$(LIBRARY) $(OBJS)
 	ranlib lib/$(LIBRARY)
 
