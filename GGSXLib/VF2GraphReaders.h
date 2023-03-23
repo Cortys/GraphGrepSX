@@ -61,10 +61,10 @@ public:
 	};
 
 
-	std::ifstream& in;
+	std::istream& in;
 	mstl_graph_id_t c_id;
 
-	VF2GraphReader_gff(LabelMap& labelMap, std::ifstream& _in)
+	VF2GraphReader_gff(LabelMap& labelMap, std::istream& _in)
 			: VF2GraphReader(labelMap), in(_in){
 		c_id = 0;
 	}
@@ -72,7 +72,7 @@ public:
 	virtual bool gotoGraph(mstl_graph_id_t id){
 //		std::cout<<"go("<<id<<"):"<<c_id<<"\n";
 
-		if(!in.is_open() || in.eof() || in.bad())
+		if(in.eof() || in.bad())
 			return false;
 
 		State state = AttendGraph;
@@ -133,7 +133,7 @@ public:
 
 
 	virtual GGSXVFLib::MstlARGraph* readGraph(){
-		if(!in.is_open() || in.eof() || in.bad())
+		if(in.eof() || in.bad())
 			return NULL;
 
 		State state = AttendGraph;

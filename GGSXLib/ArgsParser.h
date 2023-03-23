@@ -49,6 +49,7 @@ public:
 	int 			lp;
 	VERBOSE_TYPE 	verbose;
 	bool 			all_matches;
+	std::string		output;
 	MOUTPUT_TYPE 	moutput;
 	std::string 	moutput_file;
 
@@ -61,6 +62,7 @@ public:
 		all_matches = true;
 		moutput = MOUTPUT_TYPE_NO;
 		moutput_file = "";
+		output = "";
 	};
 
 	bool parse(std::map<std::string, std::string>& opts){
@@ -109,6 +111,12 @@ public:
 			else errors = true;
 		}
 
+		if(opts_contains(opts, "output")){
+			opt = opts.at("output");
+			if(opt != "") output = opt;
+			else errors = true;
+		}
+
 		if(opts_contains(opts, "moutput")){
 			opt = opts.at("moutput");
 			if(opt == "no")				moutput = MOUTPUT_TYPE_NO;
@@ -147,6 +155,13 @@ bool parse_build_argv(int argc, char* argv[], int starting_argi, std::map<std::s
 			else if(opt == "--strict"){
 				if(opts_contains(opts, "verbose"))	return false;
 				opts_add(opts, "verbose", "strict");
+			}
+			else if(opt == "--output"){
+				if(opts_contains(opts, "output")) return false;
+				argi++;
+				if (argc <= argi)
+					return false;
+				opts_add(opts, "output", argv[argi]);
 			}
 
 			else if(opt == "--lp"){

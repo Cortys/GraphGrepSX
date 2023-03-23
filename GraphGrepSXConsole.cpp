@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <map>
 #include <set>
 #include <string>
@@ -93,10 +94,12 @@ void usage(char* cmdname){
 	std::cout<<std::endl;
 	std::cout<<"BUILD"<<std::endl;
 	std::cout<<cmdname<<" -b db_file [OPTIONS]\t\t build database index"<<std::endl;
+	std::cout<<"\tIf db_file is set to '-', graphs will be read from stdin."<<std::endl;
 	std::cout<<"\tOptions:"<<std::endl;
 	std::cout<<"\t\t --verbose : print human readable details"<<std::endl;
 	std::cout<<"\t\t --strict : print csv readable details"<<std::endl;
 	std::cout<<"\t\t --full-verbose : print human readable extra details"<<std::endl;
+	std::cout<<"\t\t --output output_file : write DB to different file"<<std::endl;
 	std::cout<<std::endl;
 	std::cout<<"\t\t --lp LP : set max DFS depth to LP"<<std::endl;
 	std::cout<<std::endl;
@@ -115,6 +118,7 @@ void usage(char* cmdname){
 	std::cout<<cmdname<<" -f db_file  query_file [OPTIONS]\t\t\t\t single query"<<std::endl;
 	std::cout<<cmdname<<" -f db_file  --multi  queries_file [OPTIONS]\t\t multiple queries within the same file"<<std::endl;
 	std::cout<<cmdname<<" -f db_file  --dir  queries_directory [OPTIONS]\t\t multiple queries within the same directory"<<std::endl;
+	std::cout<<"\tIf query_file is set to '-', query graphs will be read from stdin." << std::endl;
 	std::cout<<"\tOptions:"<<std::endl;
 	std::cout<<"\t\t --verbose : print human readable details"<<std::endl;
 	std::cout<<"\t\t --strict : print csv readable details"<<std::endl;
@@ -194,36 +198,45 @@ void build(const TypedOptions& topts){
 		std::cout<<"DB file : "<<topts.db_file<<"\n";
 	}
 
-double init_time, build_time, pure_build_time, save_time, total_time; //timers
-TIMEHANDLE start=start_time();
+	double init_time, build_time, pure_build_time, save_time, total_time; //timers
+	TIMEHANDLE start=start_time();
 
 	/*
 	 * Creating data structures
 	 */
-TIMEHANDLE start_p=start_time();
-	std::ifstream is;
-	is.open(topts.db_file.c_str(), std::ios::in);
-	if(!is.is_open() || is.bad()){
-		std::cout<<"Error on opening input file : "<<topts.db_file<<"\n";
-		exit(1);
+	TIMEHANDLE start_p=start_time();
+	std::istream* is_ptr;
+	if(topts.db_file == "-")
+		is_ptr = &std::cin;
+	else {
+		std::ifstream *ifs_ptr = new std::ifstream(topts.db_file.c_str(), std::ios::in);
+		if (!ifs_ptr->is_open() || ifs_ptr->bad())
+		{
+			std::cout<<"Error on opening input file : "<<topts.db_file<<"\n";
+			exit(1);
+		}
+		is_ptr = ifs_ptr;
 	}
 	LabelMap labelMap;
-	GraphReader_gff greader(labelMap,is);
+	GraphReader_gff greader(labelMap,*is_ptr);
 	OCPTree index;
-init_time = end_time(start_p);
+	init_time = end_time(start_p);
 	if(topts.verbose > TypedOptions::VERBOSE_TYPE_STRICT)
 		std::cout<<"init time : "<<init_time<<" sec.\n";
 
 	/*
 	 * Building index ( label map + suffix tree )
 	 */
-start_p=start_time();
+	start_p=start_time();
 	MstlGraphVisitor gvisitor(new MstlGAllPathListener());
 	BuildManager bman(index, greader, gvisitor, topts.lp, (topts.verbose > TypedOptions::VERBOSE_TYPE_VERBOSE ));
 	bman.run();
-	is.close();
-pure_build_time = bman._pure_build_time;
-build_time = end_time(start_p);
+	if(topts.db_file != "-") {
+		((std::ifstream*)is_ptr)->close();
+		delete is_ptr;
+	}
+	pure_build_time = bman._pure_build_time;
+	build_time = end_time(start_p);
 	if(topts.verbose > TypedOptions::VERBOSE_TYPE_STRICT){
 		std::cout<<"build time : "<<build_time<<" sec.\n";
 		std::cout<<"pure build time : "<<pure_build_time<<" sec.\n";
@@ -232,16 +245,26 @@ build_time = end_time(start_p);
 	/*
 	 * Saving index on file [db_file].index.ggsx
 	 */
+	std::string os_file_name;
+	if (topts.output != "")
+		os_file_name = topts.output;
+	else if (topts.db_file != "-")
+		os_file_name = topts.db_file;
+	else
+	{
+		std::cout << "Reading graphs from stdin but no output file name provided (--output "<<topts.output<<"). \n";
+		exit(1);
+	}
 	if(topts.verbose > TypedOptions::VERBOSE_TYPE_STRICT){
 		std::cout<<std::endl;
-		std::cout<<"Saving index on file : "<<topts.db_file<<".index.ggsx ...\n";
+		std::cout<<"Saving index on file : "<<os_file_name<<".index.ggsx ...\n";
 	}
 start_p=start_time();
 	GGSXIndex ggsx_index(labelMap, index);
 	std::ofstream os;
-	os.open((topts.db_file+".index.ggsx").c_str(), std::ios::out);
+	os.open((os_file_name + ".index.ggsx").c_str(), std::ios::binary);
 	if(!os.is_open() || os.bad()){
-		std::cout<<"Error on opening output file : "<<topts.db_file<<".index.ggxs \n";
+		std::cout<<"Error on opening output file : "<<topts.db_file<<".index.ggsx \n";
 		exit(1);
 	}
 	os<<ggsx_index;
@@ -309,31 +332,36 @@ load_db_time = end_time(start_p);
 		std::cout<<"Building query index...\n";
 	}
 start_p=start_time();
-	std::ifstream is;
-	is.open(topts.query_file.c_str(), std::ios::in);
-	if(!is.is_open() || is.bad()){
-		std::cout<<"Error on opening input file : "<<topts.query_file<<"\n";
-		exit(1);
+	std::stringstream query_buffer;
+	if(topts.query_file == "-") {
+		query_buffer << std::cin.rdbuf();
 	}
+	else {
+		std::ifstream ifs;
+		ifs.open(topts.query_file.c_str(), std::ios::in);
+		if(!ifs.is_open() || ifs.bad()){
+			std::cout<<"Error on opening input file : "<<topts.query_file<<"\n";
+			exit(1);
+		}
+		query_buffer << ifs.rdbuf();
+		ifs.close();
+	}
+	std::string query_str = query_buffer.str();
+
+	std::istringstream query_stream(query_str);
 	OCPTree query;
-	GraphReader_gff greader(index._labelMap,is);
+	GraphReader_gff greader(index._labelMap,query_stream);
 	MstlGraph* query_graph = new MstlGraph(0);
 	bool qreaded = build_query_sxtree(query, greader, topts.lp, (topts.verbose > TypedOptions::VERBOSE_TYPE_VERBOSE), query_graph);
-	is.close();
+
 	if(!qreaded){
 		std::cout<<"Error on read query!\n";
 		exit(1);
 	}
 
-
-	is.open(topts.query_file.c_str(), std::ios::in);
-	if(!is.is_open() || is.bad()){
-		std::cout<<"Error on opening input file : "<<topts.query_file<<"\n";
-		exit(1);
-	}
-	VF2GraphReader_gff vf2greader(index._labelMap,is);
+	std::istringstream query_stream2(query_str);
+	VF2GraphReader_gff vf2greader(index._labelMap, query_stream2);
 	GGSXVFLib::MstlARGraph* vf2_query_graph = vf2greader.readGraph();
-	is.close();
 	if(vf2_query_graph==NULL){
 		std::cout<<"Error on read query for VF2!\n";
 		exit(1);
@@ -446,20 +474,26 @@ load_db_time = end_time(start_p);
 		std::cout<<"db load time : "<<load_db_time<<" sec.\n";
 	}
 
-	std::ifstream is;
-	is.open(topts.query_file.c_str(), std::ios::in);
-	if(!is.is_open() || is.bad()){
-		std::cout<<"Error on opening input file : "<<topts.query_file<<"\n";
-		exit(1);
+	std::stringstream query_buffer;
+	if (topts.query_file == "-")
+	{
+		query_buffer << std::cin.rdbuf();
 	}
-
-	std::ifstream vf2is;
-	vf2is.open(topts.query_file.c_str(), std::ios::in);
-	if(!vf2is.is_open() || vf2is.bad()){
-		std::cout<<"Error on opening input file : "<<topts.query_file<<"\n";
-		exit(1);
+	else
+	{
+		std::ifstream ifs;
+		ifs.open(topts.query_file.c_str(), std::ios::in);
+		if (!ifs.is_open() || ifs.bad())
+		{
+			std::cout << "Error on opening input file : '" << topts.query_file << "'\n";
+			exit(1);
+		}
+		query_buffer << ifs.rdbuf();
+		ifs.close();
 	}
-
+	std::string query_str = query_buffer.str();
+	std::istringstream query_stream(query_str);
+	std::istringstream query_stream_vf2(query_str);
 
 	std::ofstream fos;
 	if(topts.moutput == TypedOptions::MOUTPUT_TYPE_FILE){
@@ -493,7 +527,7 @@ load_db_time = end_time(start_p);
 
 	int query_number = 0;
 	bool next = true;
-	while(is.is_open() && !is.eof() && next){
+	while(!query_stream.eof() && next){
 		if(topts.verbose > TypedOptions::VERBOSE_TYPE_VERBOSE)
 			std::cout<<"Trying Query : "<<query_number<<" ...\n";
 		TIMEHANDLE start=start_time();
@@ -503,11 +537,11 @@ load_db_time = end_time(start_p);
 		 */
 		start_p=start_time();
 			OCPTree query;
-			GraphReader_gff greader(index._labelMap,is);
+			GraphReader_gff greader(index._labelMap, query_stream);
 			MstlGraph* query_graph = new MstlGraph(query_number);
 			next = build_query_sxtree(query, greader, topts.lp, (topts.verbose > TypedOptions::VERBOSE_TYPE_VERBOSE), query_graph);
 
-			VF2GraphReader_gff vf2greader(index._labelMap,vf2is);
+			VF2GraphReader_gff vf2greader(index._labelMap, query_stream_vf2);
 			GGSXVFLib::MstlARGraph* vf2_query_graph = vf2greader.readGraph();
 		query_build_time = end_time(start_p);
 
@@ -602,9 +636,6 @@ load_db_time = end_time(start_p);
 		std::cout<<"All Queries Done!\n";
 		std::cout<<"Total queries time : "<<end_time(start_t)<<" sec.\n";
 	}
-
-	is.close();
-	vf2is.close();
 };
 
 /* ============================================================

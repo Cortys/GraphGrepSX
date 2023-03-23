@@ -59,16 +59,16 @@ public:
 	};
 
 
-	std::ifstream& in;
+	std::istream& in;
 	mstl_graph_id_t c_id;
 
-	GraphReader_gff(LabelMap& labelMap, std::ifstream& _in)
+	GraphReader_gff(LabelMap& labelMap, std::istream& _in)
 			: GraphReader(labelMap), in(_in){
 		c_id = 0;
 	}
 
 	virtual bool gotoGraph(mstl_graph_id_t id){
-		if(!in.is_open() || in.eof() || in.bad())
+		if(in.eof() || in.bad())
 			return false;
 
 		State state = AttendGraph;
@@ -170,7 +170,7 @@ public:
 
 
 	virtual bool readGraph(MstlGraph* g){
-		if(!in.is_open() || in.eof() || in.bad())
+		if(in.eof() || in.bad())
 			return false;
 
 		State state = AttendGraph;
