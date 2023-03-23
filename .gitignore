@@ -2,3 +2,4 @@ vflib2/src/*.o
 vflib2/lib/*.a
 *.index.ggsx
 build
+matches
