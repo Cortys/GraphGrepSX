@@ -22,7 +22,7 @@ namespace GGSXLib{
 class OCPTNGraphsInfos : public std::map<mstl_graph_id_t, size_t>{
 public:
 	/*
-	 * Save to file
+	 * Load from file
 	 */
 	friend std::istream& operator>>(std::istream& is, OCPTNGraphsInfos& gi){
 		size_t size = 0;
@@ -38,7 +38,7 @@ public:
 	}
 
 	/*
-	 * Load from file
+	 * Save to file
 	 */
 	friend std::ostream& operator<<(std::ostream& os, OCPTNGraphsInfos& gi){
 		size_t size = gi.size();

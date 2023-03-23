@@ -1,5 +1,5 @@
-vflib2/src/*.o
+*.o
 vflib2/lib/*.a
 *.index.ggsx
-build
+build*
 matches

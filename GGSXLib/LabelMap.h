@@ -35,14 +35,18 @@ public:
 		}
 	}
 
-	mstl_node_label_t* getLabelP(std::string s){
+	mstl_node_label_t *getLabelP(std::string s)
+	{
 		LabelMap::iterator IT = this->find(s);
-		if(IT == this->end()){
+		if (IT == this->end())
+		{
 			mstl_node_label_t label = (mstl_node_label_t)this->size();
-			this->insert(std::pair<std::string,mstl_node_label_t>(s,label));
-			return &label;
+			std::pair<std::map<std::string, mstl_node_label_t>::iterator, bool> inserted;
+			inserted = this->insert(std::pair<std::string, mstl_node_label_t>(s, label));
+			return &(inserted.first->second);
 		}
-		else{
+		else
+		{
 			return &(IT->second);
 		}
 	}
@@ -56,8 +60,7 @@ public:
 		for(int i=0;i<size;i++){
 			std::string s_label;
 			mstl_node_label_t n_label=0;
-			is>> s_label;
-			is.seekg(((int)is.tellg())+1);
+			std::getline(is, s_label, '\n');
 			is.read((char*)&n_label, sizeof(mstl_node_label_t));
 			m.insert(std::pair<std::string, mstl_node_label_t>(s_label,n_label));
 		}
@@ -71,9 +74,10 @@ public:
 		os.write((char*)&(size), sizeof(std::size_t));
 		for(LabelMap::iterator IT = m.begin(); IT!=m.end(); IT++){
 			os<< IT->first;
-			os<<std::endl;
+			os<<"\n";
 			os.write((char*)&(IT->second), sizeof(mstl_node_label_t));
 		}
+		os.flush();
 		return os;
 	}
 

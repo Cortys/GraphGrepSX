@@ -32,7 +32,7 @@ void build_db_sxtree(OCPTree& index, GraphReader& greader, int lp, bool full_ver
 
 void save_db_index(GGSXIndex& index, std::string db_file){
 	std::ofstream os;
-	os.open((db_file+".index.ggsx").c_str(), std::ios::out);
+	os.open((db_file+".index.ggsx").c_str(), std::ios::binary);
 	if(!os.is_open() || os.bad()){
 		std::cout<<"Error on opening output file : "<<db_file<<".index.ggxs \n";
 		exit(1);
@@ -45,7 +45,7 @@ void save_db_index(GGSXIndex& index, std::string db_file){
 
 void load_db_index(GGSXIndex& index, std::string db_file){
 	std::ifstream is;
-	is.open((db_file+".index.ggsx").c_str(), std::ios::in);
+	is.open((db_file+".index.ggsx").c_str(), std::ios::binary);
 	if(!is.is_open() || is.bad()){
 		std::cout<<"Error on opening input file : "<<db_file<<".index.ggxs \n";
 		exit(1);
